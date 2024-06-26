@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+#%%
+"""
+Created on Wed Jun 26 12:14:45 2024
+
+@author: ozdal.caliskan
+"""
+import numpy as np
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup as bs
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+
+#%%
+
+#%%
+
+link = 'https://www.amazon.in/OnePlus-Mirror-Black-128GB-Storage/product-reviews/B07DJHV6VZ/ref=cm_cr_dp_d_show_all_btm?ie=UTF8&reviewerType=all_reviews'
+
+# Fetch the webpage content
+page = requests.get(link)
+
+# Parse the content using BeautifulSoup
+soup = bs(page.content, 'html.parser')
+
+# Initialize lists to store data
+names = []
+titles = []
+ratings = []
+
+#%%
+
+#%%
+# Extract all review blocks
+review_blocks = soup.find_all('div', {'data-hook': 'review'})
+
+# Iterate through each review block to extract details
+for review in review_blocks:
+    # Extract customer name
+    name_tag = review.find('span', class_='a-profile-name')
+    if name_tag:
+        names.append(name_tag.get_text().strip())
+    else:
+        names.append('Anonymous')  # Handle cases where name is not found
+
+    # Extract review title
+    title_tag = review.find('a', class_='review-title-content')
+    if title_tag:
+        titles.append(title_tag.get_text().strip())
+    else:
+        titles.append('No title')  # Handle cases where title is not found
+
+    # Extract review rating
+    rating_tag = review.find('i', class_='review-rating')
+    if rating_tag:
+        rating = rating_tag.find('span', {'class': 'a-icon-alt'})
+        if rating:
+            ratings.append(rating.get_text().split()[0])  # Extract the numerical rating
+        else:
+            ratings.append('No rating')  # Handle cases where rating is not found
+    else:
+        ratings.append('No rating')  # Handle cases where rating tag is not found
+
+# Check lengths of lists
+print(f'Length of names list: {len(names)}')
+print(f'Length of titles list: {len(titles)}')
+print(f'Length of ratings list: {len(ratings)}')
+
+# Create DataFrame if lengths are consistent
+if len(names) == len(titles) == len(ratings):
+    df = pd.DataFrame({
+        'Customer Name': names,
+        'Review Title': titles,
+        'Rating': ratings
+    })
+    print(df.head())
+else:
+    print("Lengths of lists do not match. Check the extraction logic.")
+    
+#%%
+    
+#%%
+
+# Convert 'Rating' column to numeric
+df['Rating'] = pd.to_numeric(df['Rating'], errors='coerce')
+
+# Plot histogram
+plt.figure(figsize=(8, 6))
+plt.hist(df['Rating'], bins=5, edgecolor='black', alpha=0.7)
+plt.xlabel('Rating')
+plt.ylabel('Count')
+plt.title('Distribution of Ratings')
+plt.grid(True)
+plt.show()
+#%%
+
+#%%
+
+# Combine all review titles into a single string
+all_titles = ' '.join(df['Review Title'])
+
+# Generate word cloud
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(all_titles)
+
+# Plot word cloud
+plt.figure(figsize=(10, 8))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Word Cloud of Review Titles')
+plt.show()
+
+#%%
